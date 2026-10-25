@@ -14,6 +14,7 @@ import sexpdata
 
 from ...core.config import config
 from ..base import BaseElementParser
+from ..utils import parse_stroke
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +51,7 @@ class WireParser(BaseElementParser):
                             wire_data["points"].append({"x": x, "y": y})
 
             elif elem_type == "stroke":
-                # Parse stroke: (stroke (width 0) (type default))
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list) and len(stroke_elem) >= 2:
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width":
-                            wire_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type":
-                            wire_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, wire_data)
 
             elif elem_type == "uuid":
                 wire_data["uuid"] = str(elem[1]) if len(elem) > 1 else None
@@ -165,6 +159,8 @@ class WireParser(BaseElementParser):
 
         stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
         stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
+        if wire_data.get("stroke_color") is not None:
+            stroke_sexp.append([sexpdata.Symbol("color"), *wire_data["stroke_color"]])
         sexp.append(stroke_sexp)
 
         # Add UUID
