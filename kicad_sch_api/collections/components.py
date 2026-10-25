@@ -13,6 +13,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from ..core.ic_manager import ICManager
 from ..core.types import PinInfo, Point, SchematicPin, SchematicSymbol
 from ..library.cache import SymbolDefinition, get_symbol_cache
+from ..utils.component_filter import filter_components
 from ..utils.validation import SchematicValidator, ValidationError, ValidationIssue
 from .base import BaseCollection, IndexSpec, ValidationLevel
 
@@ -1229,58 +1230,8 @@ class ComponentCollection(BaseCollection[Component]):
 
     # Filter and search methods
     def filter(self, **criteria) -> List[Component]:
-        """
-        Filter components by various criteria.
-
-        Supported criteria:
-            lib_id: Filter by library ID (exact match)
-            value: Filter by value (exact match)
-            value_pattern: Filter by value pattern (contains)
-            reference_pattern: Filter by reference pattern (regex)
-            footprint: Filter by footprint (exact match)
-            in_area: Filter by area (tuple of (x1, y1, x2, y2))
-            has_property: Filter components that have a specific property
-
-        Args:
-            **criteria: Filter criteria
-
-        Returns:
-            List of matching components
-        """
-        results = list(self._items)
-
-        # Apply filters
-        if "lib_id" in criteria:
-            lib_id = criteria["lib_id"]
-            results = [c for c in results if c.lib_id == lib_id]
-
-        if "value" in criteria:
-            value = criteria["value"]
-            results = [c for c in results if c.value == value]
-
-        if "value_pattern" in criteria:
-            pattern = criteria["value_pattern"].lower()
-            results = [c for c in results if pattern in c.value.lower()]
-
-        if "reference_pattern" in criteria:
-            import re
-
-            pattern = re.compile(criteria["reference_pattern"])
-            results = [c for c in results if pattern.match(c.reference)]
-
-        if "footprint" in criteria:
-            footprint = criteria["footprint"]
-            results = [c for c in results if c.footprint == footprint]
-
-        if "in_area" in criteria:
-            x1, y1, x2, y2 = criteria["in_area"]
-            results = [c for c in results if x1 <= c.position.x <= x2 and y1 <= c.position.y <= y2]
-
-        if "has_property" in criteria:
-            prop_name = criteria["has_property"]
-            results = [c for c in results if prop_name in c.properties]
-
-        return results
+        """Filter components by criteria; see utils.component_filter.filter_components."""
+        return filter_components(self._items, **criteria)
 
     def filter_by_type(self, component_type: str) -> List[Component]:
         """
