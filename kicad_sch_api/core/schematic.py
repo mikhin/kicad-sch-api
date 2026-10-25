@@ -1741,6 +1741,8 @@ class Schematic:
                 text_dict["color"] = text_element.color
             if text_element.face is not None:
                 text_dict["face"] = text_element.face
+            if text_element.justify:
+                text_dict["justify"] = text_element.justify
             text_data.append(text_dict)
 
         self._data["texts"] = text_data

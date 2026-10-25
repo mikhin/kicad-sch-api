@@ -169,6 +169,17 @@ class TextElement:
         self._data.face = str(value) if value is not None else None
         self._collection._mark_modified()
 
+    @property
+    def justify(self) -> Optional[List[str]]:
+        """Text justification, e.g. ["left", "bottom"]; None means centered."""
+        return getattr(self._data, "justify", None)
+
+    @justify.setter
+    def justify(self, value: Optional[List[str]]) -> None:
+        """Set text justification."""
+        self._data.justify = list(value) if value else None
+        self._collection._mark_modified()
+
     def validate(self) -> List[ValidationIssue]:
         """Validate this text element."""
         return self._validator.validate_text(self._data.__dict__)

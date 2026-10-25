@@ -11,6 +11,7 @@ import sexpdata
 
 from ...core.config import config
 from ..base import BaseElementParser
+from ..utils import fill_to_sexp, parse_fill, parse_stroke, stroke_to_sexp
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,9 @@ class TextParser(BaseElementParser):
                     text_data["rotation"] = float(elem[3])
             elif elem_type == "effects":
                 for effect_elem in elem[1:]:
-                    if isinstance(effect_elem, list) and str(effect_elem[0]) == "font":
+                    if isinstance(effect_elem, list) and str(effect_elem[0]) == "justify":
+                        text_data["justify"] = [str(v) for v in effect_elem[1:]]
+                    elif isinstance(effect_elem, list) and str(effect_elem[0]) == "font":
                         for font_elem in effect_elem[1:]:
                             if isinstance(font_elem, list):
                                 font_prop = str(font_elem[0])
@@ -127,19 +130,9 @@ class TextParser(BaseElementParser):
                         float(elem[4]),
                     )
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            text_box_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            text_box_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, text_box_data)
             elif elem_type == "fill":
-                for fill_elem in elem[1:]:
-                    if isinstance(fill_elem, list) and str(fill_elem[0]) == "type":
-                        text_box_data["fill_type"] = (
-                            str(fill_elem[1]) if len(fill_elem) >= 2 else "none"
-                        )
+                parse_fill(elem, text_box_data)
             elif elem_type == "effects":
                 for effect_elem in elem[1:]:
                     if isinstance(effect_elem, list):
@@ -201,6 +194,10 @@ class TextParser(BaseElementParser):
             font.append([sexpdata.Symbol("face"), text_data["face"]])
 
         effects.append(font)
+        if text_data.get("justify"):
+            effects.append(
+                [sexpdata.Symbol("justify"), *(sexpdata.Symbol(v) for v in text_data["justify"])]
+            )
         sexp.append(effects)
 
         # Add UUID
@@ -241,19 +238,8 @@ class TextParser(BaseElementParser):
         margins = text_box_data.get("margins", (0.9525, 0.9525, 0.9525, 0.9525))
         sexp.append([sexpdata.Symbol("margins"), margins[0], margins[1], margins[2], margins[3]])
 
-        # Add stroke
-        stroke_width = text_box_data.get("stroke_width", 0)
-        stroke_type = text_box_data.get("stroke_type", "solid")
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        sexp.append(stroke_sexp)
-
-        # Add fill
-        fill_type = text_box_data.get("fill_type", "none")
-        fill_sexp = [sexpdata.Symbol("fill")]
-        fill_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(fill_type)])
-        sexp.append(fill_sexp)
+        sexp.append(stroke_to_sexp(text_box_data, 0, "solid"))
+        sexp.append(fill_to_sexp(text_box_data, "none"))
 
         # Add effects (font properties and justification)
         font_size = text_box_data.get("font_size", config.defaults.font_size)

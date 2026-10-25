@@ -113,6 +113,7 @@ class ElementFactory:
             thickness=text_dict.get("thickness"),
             color=text_dict.get("color"),
             face=text_dict.get("face"),
+            justify=text_dict.get("justify"),
         )
 
     @staticmethod

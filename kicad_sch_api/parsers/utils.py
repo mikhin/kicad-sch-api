@@ -5,7 +5,69 @@ Common helper functions used across multiple element parsers,
 extracted from monolithic parser.py for reusability.
 """
 
-from typing import List
+from typing import Any, Dict, List, Tuple, Union
+
+import sexpdata
+
+
+def _number(value: Any) -> Union[int, float]:
+    """Parse an S-expression number, keeping integers as int so they round-trip unchanged."""
+    number = float(value)
+    return int(number) if number.is_integer() else number
+
+
+def _parse_color(elem: List[Any]) -> Tuple[Union[int, float], ...]:
+    """Parse (color r g b a) into an (r, g, b, a) tuple."""
+    return tuple(_number(v) for v in elem[1:5])
+
+
+def parse_stroke(stroke: List[Any], data: Dict[str, Any]) -> None:
+    """Read (stroke (width w) (type t) (color r g b a)) into stroke_width/stroke_type/stroke_color."""
+    for elem in stroke[1:]:
+        if not isinstance(elem, list) or len(elem) < 2:
+            continue
+        key = str(elem[0])
+        if key == "width":
+            data["stroke_width"] = float(elem[1])
+        elif key == "type":
+            data["stroke_type"] = str(elem[1])
+        elif key == "color" and len(elem) >= 5:
+            data["stroke_color"] = _parse_color(elem)
+
+
+def parse_fill(fill: List[Any], data: Dict[str, Any]) -> None:
+    """Read (fill (type t) (color r g b a)) into fill_type/fill_color."""
+    for elem in fill[1:]:
+        if not isinstance(elem, list):
+            continue
+        key = str(elem[0])
+        if key == "type":
+            data["fill_type"] = str(elem[1]) if len(elem) >= 2 else "none"
+        elif key == "color" and len(elem) >= 5:
+            data["fill_color"] = _parse_color(elem)
+
+
+def stroke_to_sexp(data: Dict[str, Any], default_width: float, default_type: str) -> List[Any]:
+    """Build (stroke ...) from stroke_width/stroke_type/stroke_color."""
+    stroke = [
+        sexpdata.Symbol("stroke"),
+        [sexpdata.Symbol("width"), data.get("stroke_width", default_width)],
+        [sexpdata.Symbol("type"), sexpdata.Symbol(data.get("stroke_type", default_type))],
+    ]
+    if data.get("stroke_color") is not None:
+        stroke.append([sexpdata.Symbol("color"), *data["stroke_color"]])
+    return stroke
+
+
+def fill_to_sexp(data: Dict[str, Any], default_type: str) -> List[Any]:
+    """Build (fill ...) from fill_type/fill_color."""
+    fill = [
+        sexpdata.Symbol("fill"),
+        [sexpdata.Symbol("type"), sexpdata.Symbol(data.get("fill_type", default_type))],
+    ]
+    if data.get("fill_color") is not None:
+        fill.append([sexpdata.Symbol("color"), *data["fill_color"]])
+    return fill
 
 
 def color_to_rgba(color_name: str) -> List[float]:

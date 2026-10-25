@@ -648,6 +648,7 @@ class Text:
     thickness: Optional[float] = None  # Stroke width (None = use default)
     color: Optional[Tuple[int, int, int, float]] = None  # RGBA (None = use default)
     face: Optional[str] = None  # Font face name (None = use default)
+    justify: Optional[List[str]] = None  # e.g. ["left", "bottom"] (None = centered)
 
     def __post_init__(self) -> None:
         if not self.uuid:

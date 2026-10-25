@@ -17,6 +17,7 @@ import sexpdata
 
 from ...core.config import config
 from ..base import BaseElementParser
+from ..utils import fill_to_sexp, parse_fill, parse_stroke, stroke_to_sexp
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,7 @@ class GraphicsParser(BaseElementParser):
                     if isinstance(pt, list) and len(pt) >= 3 and str(pt[0]) == "xy":
                         polyline_data["points"].append({"x": float(pt[1]), "y": float(pt[2])})
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            polyline_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            polyline_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, polyline_data)
             elif elem_type == "uuid":
                 polyline_data["uuid"] = str(elem[1]) if len(elem) > 1 else None
 
@@ -87,17 +82,9 @@ class GraphicsParser(BaseElementParser):
             elif elem_type == "end" and len(elem) >= 3:
                 arc_data["end"] = {"x": float(elem[1]), "y": float(elem[2])}
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            arc_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            arc_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, arc_data)
             elif elem_type == "fill":
-                for fill_elem in elem[1:]:
-                    if isinstance(fill_elem, list) and str(fill_elem[0]) == "type":
-                        arc_data["fill_type"] = str(fill_elem[1]) if len(fill_elem) >= 2 else "none"
+                parse_fill(elem, arc_data)
             elif elem_type == "uuid":
                 arc_data["uuid"] = str(elem[1]) if len(elem) > 1 else None
 
@@ -126,19 +113,9 @@ class GraphicsParser(BaseElementParser):
             elif elem_type == "radius" and len(elem) >= 2:
                 circle_data["radius"] = float(elem[1])
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            circle_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            circle_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, circle_data)
             elif elem_type == "fill":
-                for fill_elem in elem[1:]:
-                    if isinstance(fill_elem, list) and str(fill_elem[0]) == "type":
-                        circle_data["fill_type"] = (
-                            str(fill_elem[1]) if len(fill_elem) >= 2 else "none"
-                        )
+                parse_fill(elem, circle_data)
             elif elem_type == "uuid":
                 circle_data["uuid"] = str(elem[1]) if len(elem) > 1 else None
 
@@ -166,19 +143,9 @@ class GraphicsParser(BaseElementParser):
                     if isinstance(pt, list) and len(pt) >= 3 and str(pt[0]) == "xy":
                         bezier_data["points"].append({"x": float(pt[1]), "y": float(pt[2])})
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            bezier_data["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            bezier_data["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, bezier_data)
             elif elem_type == "fill":
-                for fill_elem in elem[1:]:
-                    if isinstance(fill_elem, list) and str(fill_elem[0]) == "type":
-                        bezier_data["fill_type"] = (
-                            str(fill_elem[1]) if len(fill_elem) >= 2 else "none"
-                        )
+                parse_fill(elem, bezier_data)
             elif elem_type == "uuid":
                 bezier_data["uuid"] = str(elem[1]) if len(elem) > 1 else None
 
@@ -199,19 +166,9 @@ class GraphicsParser(BaseElementParser):
             elif elem_type == "end" and len(elem) >= 3:
                 rectangle["end"] = {"x": float(elem[1]), "y": float(elem[2])}
             elif elem_type == "stroke":
-                for stroke_elem in elem[1:]:
-                    if isinstance(stroke_elem, list):
-                        stroke_type = str(stroke_elem[0])
-                        if stroke_type == "width" and len(stroke_elem) >= 2:
-                            rectangle["stroke_width"] = float(stroke_elem[1])
-                        elif stroke_type == "type" and len(stroke_elem) >= 2:
-                            rectangle["stroke_type"] = str(stroke_elem[1])
+                parse_stroke(elem, rectangle)
             elif elem_type == "fill":
-                for fill_elem in elem[1:]:
-                    if isinstance(fill_elem, list) and str(fill_elem[0]) == "type":
-                        rectangle["fill_type"] = (
-                            str(fill_elem[1]) if len(fill_elem) >= 2 else "none"
-                        )
+                parse_fill(elem, rectangle)
             elif elem_type == "uuid" and len(elem) >= 2:
                 rectangle["uuid"] = str(elem[1])
 
@@ -261,13 +218,9 @@ class GraphicsParser(BaseElementParser):
                 pts_sexp.append([sexpdata.Symbol("xy"), x, y])
             sexp.append(pts_sexp)
 
-        # Add stroke
-        stroke_width = polyline_data.get("stroke_width", config.defaults.stroke_width)
-        stroke_type = polyline_data.get("stroke_type", config.defaults.stroke_type)
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        sexp.append(stroke_sexp)
+        sexp.append(
+            stroke_to_sexp(polyline_data, config.defaults.stroke_width, config.defaults.stroke_type)
+        )
 
         # Add UUID
         if "uuid" in polyline_data:
@@ -290,19 +243,10 @@ class GraphicsParser(BaseElementParser):
                 y = int(y)
             sexp.append([sexpdata.Symbol(point_name), x, y])
 
-        # Add stroke
-        stroke_width = arc_data.get("stroke_width", config.defaults.stroke_width)
-        stroke_type = arc_data.get("stroke_type", config.defaults.stroke_type)
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        sexp.append(stroke_sexp)
-
-        # Add fill
-        fill_type = arc_data.get("fill_type", config.defaults.fill_type)
-        fill_sexp = [sexpdata.Symbol("fill")]
-        fill_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(fill_type)])
-        sexp.append(fill_sexp)
+        sexp.append(
+            stroke_to_sexp(arc_data, config.defaults.stroke_width, config.defaults.stroke_type)
+        )
+        sexp.append(fill_to_sexp(arc_data, config.defaults.fill_type))
 
         # Add UUID
         if "uuid" in arc_data:
@@ -328,19 +272,10 @@ class GraphicsParser(BaseElementParser):
         radius = circle_data.get("radius", 0)
         sexp.append([sexpdata.Symbol("radius"), radius])
 
-        # Add stroke
-        stroke_width = circle_data.get("stroke_width", config.defaults.stroke_width)
-        stroke_type = circle_data.get("stroke_type", config.defaults.stroke_type)
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        sexp.append(stroke_sexp)
-
-        # Add fill
-        fill_type = circle_data.get("fill_type", config.defaults.fill_type)
-        fill_sexp = [sexpdata.Symbol("fill")]
-        fill_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(fill_type)])
-        sexp.append(fill_sexp)
+        sexp.append(
+            stroke_to_sexp(circle_data, config.defaults.stroke_width, config.defaults.stroke_type)
+        )
+        sexp.append(fill_to_sexp(circle_data, config.defaults.fill_type))
 
         # Add UUID
         if "uuid" in circle_data:
@@ -366,19 +301,10 @@ class GraphicsParser(BaseElementParser):
                 pts_sexp.append([sexpdata.Symbol("xy"), x, y])
             sexp.append(pts_sexp)
 
-        # Add stroke
-        stroke_width = bezier_data.get("stroke_width", config.defaults.stroke_width)
-        stroke_type = bezier_data.get("stroke_type", config.defaults.stroke_type)
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        sexp.append(stroke_sexp)
-
-        # Add fill
-        fill_type = bezier_data.get("fill_type", config.defaults.fill_type)
-        fill_sexp = [sexpdata.Symbol("fill")]
-        fill_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(fill_type)])
-        sexp.append(fill_sexp)
+        sexp.append(
+            stroke_to_sexp(bezier_data, config.defaults.stroke_width, config.defaults.stroke_type)
+        )
+        sexp.append(fill_to_sexp(bezier_data, config.defaults.fill_type))
 
         # Add UUID
         if "uuid" in bezier_data:
@@ -400,27 +326,12 @@ class GraphicsParser(BaseElementParser):
         end_x, end_y = end["x"], end["y"]
         sexp.append([sexpdata.Symbol("end"), end_x, end_y])
 
-        # Add stroke
-        stroke_width = rectangle_data.get("stroke_width", config.defaults.stroke_width)
-        stroke_type = rectangle_data.get("stroke_type", config.defaults.stroke_type)
-        stroke_sexp = [sexpdata.Symbol("stroke")]
-        stroke_sexp.append([sexpdata.Symbol("width"), stroke_width])
-        stroke_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(stroke_type)])
-        # Add stroke color if present
-        if "stroke_color" in rectangle_data:
-            r, g, b, a = rectangle_data["stroke_color"]
-            stroke_sexp.append([sexpdata.Symbol("color"), r, g, b, a])
-        sexp.append(stroke_sexp)
-
-        # Add fill
-        fill_type = rectangle_data.get("fill_type", config.defaults.fill_type)
-        fill_sexp = [sexpdata.Symbol("fill")]
-        fill_sexp.append([sexpdata.Symbol("type"), sexpdata.Symbol(fill_type)])
-        # Add fill color if present
-        if "fill_color" in rectangle_data:
-            r, g, b, a = rectangle_data["fill_color"]
-            fill_sexp.append([sexpdata.Symbol("color"), r, g, b, a])
-        sexp.append(fill_sexp)
+        sexp.append(
+            stroke_to_sexp(
+                rectangle_data, config.defaults.stroke_width, config.defaults.stroke_type
+            )
+        )
+        sexp.append(fill_to_sexp(rectangle_data, config.defaults.fill_type))
 
         # Add UUID
         if "uuid" in rectangle_data:
