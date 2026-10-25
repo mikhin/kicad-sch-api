@@ -493,6 +493,7 @@ class Wire:
     wire_type: WireType = WireType.WIRE
     stroke_width: float = 0.0
     stroke_type: str = "default"
+    stroke_color: Optional[Tuple[int, int, int, float]] = None  # RGBA (None = theme color)
 
     def __post_init__(self) -> None:
         if not self.uuid:

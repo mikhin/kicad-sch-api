@@ -1700,6 +1700,8 @@ class Schematic:
                 "stroke_width": wire.stroke_width,
                 "stroke_type": wire.stroke_type,
             }
+            if wire.stroke_color is not None:
+                wire_dict["stroke_color"] = wire.stroke_color
             wire_data.append(wire_dict)
 
         self._data["wires"] = wire_data

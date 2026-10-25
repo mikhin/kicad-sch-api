@@ -14,6 +14,7 @@ SCHEMATIC = """(kicad_sch
 	(uuid "00000000-0000-0000-0000-000000000001")
 	(paper "A4")
 	(lib_symbols)
+	(wire (pts (xy 10 80) (xy 30 80)) (stroke (width 0) (type default) (color 0 160 255 1)) (uuid "00000000-0000-0000-0000-000000000018"))
 	(polyline (pts (xy 10 10) (xy 20 10)) (stroke (width 0.6) (type solid) (color 255 140 0 1)) (uuid "00000000-0000-0000-0000-000000000010"))
 	(arc (start 30 10) (mid 35 5) (end 40 10) (stroke (width 0.2) (type dash) (color 10 20 30 1)) (fill (type color) (color 40 50 60 1)) (uuid "00000000-0000-0000-0000-000000000011"))
 	(circle (center 50 10) (radius 2) (stroke (width 0.3) (type solid)) (fill (type color) (color 220 30 30 1)) (uuid "00000000-0000-0000-0000-000000000012"))
@@ -66,6 +67,9 @@ def test_stroke_and_fill_colors_survive_save(tmp_path):
     assert text_box["stroke_color"] == (9, 8, 7, 1)
     assert text_box["fill_color"] == (200, 200, 200, 1)
 
+    wire = _by_uuid(data["wires"], "018")
+    assert wire["stroke_color"] == (0, 160, 255, 1)
+
 
 def test_text_justify_survives_save(tmp_path):
     data = _roundtrip(tmp_path)
@@ -87,6 +91,7 @@ def test_saved_file_keeps_color_and_justify_tokens(tmp_path):
         "(color 220 30 30 1)",
         "(color 255 236 150 1)",
         "(color 9 8 7 1)",
+        "(color 0 160 255 1)",
         "(justify left bottom)",
     ]:
         assert token in saved, token

@@ -63,6 +63,7 @@ class ElementFactory:
             wire_type=WireType(wire_dict.get("wire_type", "wire")),
             stroke_width=wire_dict.get("stroke_width", 0.0),
             stroke_type=wire_dict.get("stroke_type", "default"),
+            stroke_color=wire_dict.get("stroke_color"),
         )
 
     @staticmethod
